@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import pyrealsense2 as rs
-
-
 def depth_720_color_720_fps_30():
     config = rs.config()
     config.enable_stream(rs.stream.depth, 1280, 720, rs.format.z16, 30)

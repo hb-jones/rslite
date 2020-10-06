@@ -1,13 +1,34 @@
-import rslite
-import pyrealsense2 as rs
 import time
 import numpy as np
 import cv2
-import rsconfig
+from rslite import rsconfig
+from rslite import rslite
+import pyrealsense2 as rs
+
+def pcInfo():
+    config = rsconfig.depth_480_fps_90()
+    cam = rslite.RSCam(config, pointcloud = True)
+    cam.startStreaming()
+    x = 0
+    while x<100:
+        pc = cam.pollPointCloud()
+        if pc:    
+            x+=1
+            pc = rs.points(pc)
+            verticies = np.asanyarray(pc.get_vertices())
+            print("Type Verticies:       {}".format(type(verticies)))
+            print("Value Verticies:      {}".format(verticies))
+            print("Type Verticies[0]:    {}".format(type(verticies[0])))
+            print("Type Verticies[0]:    {}".format(verticies[0]))
+            print("Type Verticies[0][0]: {}".format(type(verticies[0][0])))
+            print("Type Verticies[0][0]: {}".format(verticies[0][0]))
+            print()
+    cam.stopStreaming()
+
+
 
 def framerateTest():
-    config = rs.config()
-    config.enable_stream(rs.stream.depth, 848, 100, rs.format.z16, 300)
+    config = rsconfig.depth_480_color_480_fps_60()
     cam = rslite.RSCam(config)
     cam.startStreaming()
     
@@ -78,4 +99,4 @@ def differenceView():
 
 
 if __name__ == '__main__':
-    differenceView()
+    pcInfo()

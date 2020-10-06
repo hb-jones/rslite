@@ -7,8 +7,10 @@
             },
             "includePath": [
                 "/opt/ros/noetic/include/**",
-                "/home/harrison/catkin_ws/src/realsense-ros-lightweight/include/**",
-                "/usr/include/**"
+                "/home/harrison/catkin_ws/include/**",
+                "/home/harrison/catkin_ws/src/rslite/include/**",
+                "/usr/include/**",
+                "/home/harrison/catkin_ws/src/rslite/src/**"
             ],
             "name": "ROS",
             "intelliSenseMode": "gcc-x64",
