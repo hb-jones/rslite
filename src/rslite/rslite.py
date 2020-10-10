@@ -7,9 +7,11 @@ class RSCam():
     paused = True
     depth_flag = False
     color_flag = False
+    disparity_flag = False
     pc_flag = False
     depth_frame = None
     color_frame = None
+    disparity_frame = None
     points_frame = None
 
     def __init__(self, config = None, pointcloud = False):
@@ -25,7 +27,7 @@ class RSCam():
         self.depth_scale = depth_sensor.get_depth_scale()
         self.gen_pc = pointcloud
         self.pc = rs.pointcloud()
-        #self.depthUnitTransform = rs.units_transform()
+        self.depthUnitTransform = rs.units_transform()
         
 
     def __del__(self):
@@ -64,10 +66,11 @@ class RSCam():
 
             elif depth_frame and self.gen_pc:
                 self.buildPointCloud(depth_frame)
-            if depth_frame:
-                #depth_frame = self.depthUnitTransform.process(depth_frame)
-                self.depth_frame = depth_frame
+            if depth_frame: #Fix frame checking
+                self.depth_frame = self.depthUnitTransform.process(depth_frame)
                 self.depth_flag = True
+                self.disparity_frame = depth_frame
+                self.disparity_flag = True
             if color_frame:
                 self.color_frame = color_frame
                 self.color_flag = True
@@ -75,7 +78,7 @@ class RSCam():
     
     def buildPointCloud(self, depth, color = False):
         points = self.pc.calculate(depth)
-        color = False
+        color = False #TODO Fix
         if color:
             self.pc.map_to(color)
         else:
@@ -83,11 +86,11 @@ class RSCam():
         self.points_frame = points
         self.pc_flag = True
 
-    def pollDepthFrame(self):
-        if self.depth_flag:
-            self.depth_flag = False
+    def pollDisparityFrame(self):
+        if self.disparity_flag:
+            self.disparity_flag = False
 
-            return self.depth_frame
+            return self.disparity_frame
         else:
             return False
     
@@ -95,6 +98,13 @@ class RSCam():
         if self.color_flag:
             self.color_flag = False
             return self.color_frame
+        else:
+            return False
+
+    def pollDepthFrame(self):
+        if self.depth_flag:
+            self.depth_flag = False
+            return self.depth_frame
         else:
             return False
 

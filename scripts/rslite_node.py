@@ -4,11 +4,19 @@ from rslite import rsconfig
 from rslite import rslite
 from std_msgs.msg import String, Header
 from sensor_msgs.msg import Image, PointCloud2, PointField
+import sensor_msgs.point_cloud2 as pc2
 import time
 import math
 import numpy as np
 from cv_bridge import CvBridge
-import pyrealsense2 as rs 
+import pyrealsense2 as rs
+
+import tf
+import tf2_ros
+import geometry_msgs.msg
+import pcl_msgs
+import pcl_ros
+
 
 def imagePub(pc = False):
     #Initialise RS Camera
@@ -22,9 +30,10 @@ def imagePub(pc = False):
     if pc:
         pubPC = rospy.Publisher('RSL/Pointcloud', PointCloud2, queue_size=10)
     rospy.init_node('RSLCamera', anonymous=True)
+    publishBasicTransform('rs_frame')
     rate = rospy.Rate(120) # 120Hz
     while not rospy.is_shutdown():
-        frameDepth = cam.pollDepthFrame()
+        frameDepth = cam.pollDisparityFrame()
         if frameDepth:
             depthImage = generateImageFromFrame(frameDepth)
             pubDepth.publish(depthImage)
@@ -46,14 +55,15 @@ def generatePointcloud(frame):
     pc.header.seq = frame.frame_number
     pc.header.stamp.secs = math.floor(frame.get_timestamp()/1000)
     pc.header.stamp.nsecs = int((frame.get_timestamp()%1000)*10**6)
-    pc.header.frame_id = "frame_id" #TODO Sort this shit out
+    pc.header.frame_id = "rs_frame" #TODO Sort this shit out
     pc.height = 1 #As is unordered TODO check this
     pc.width = frame.size()
     pc.fields = genPointField()
     pc.is_bigendian = False #TODO Check
-    pc.row_step = frame.size()
     pc.data = np.asanyarray(frame.get_vertices()).tobytes()
-    pc.is_dense = False
+    pc.is_dense = True
+    pc.point_step = 12
+    pc.row_step = pc.point_step*pc.width
     return pc
 
 
@@ -70,14 +80,37 @@ def genPointField():
     y.datatype = 7
     y.count = 1
     z = PointField()
-    z.name = "y"
+    z.name = "z"
     z.offset = 8
     z.datatype = 7
     z.count = 1
+    # rgb = PointField()
+    # rgb.name = "rgb"
+    # rgb.offset = 12
+    # rgb.
     return [x,y,z]
     
     
+def publishBasicTransform(name):#TODO this should not be static and should have correct rotation
+    broadcaster = tf2_ros.StaticTransformBroadcaster()
+    static_transformStamped = geometry_msgs.msg.TransformStamped()
 
+    static_transformStamped.header.stamp = rospy.Time.now()
+    static_transformStamped.header.frame_id = "world"
+    static_transformStamped.child_frame_id = name
+
+    static_transformStamped.transform.translation.x = float(0)
+    static_transformStamped.transform.translation.y = float(0)
+    static_transformStamped.transform.translation.z = float(0)
+
+    quat = tf.transformations.quaternion_from_euler(
+                float(math.pi/2),float(math.pi),float(-math.pi/2))
+    static_transformStamped.transform.rotation.x = quat[0]
+    static_transformStamped.transform.rotation.y = quat[1]
+    static_transformStamped.transform.rotation.z = quat[2]
+    static_transformStamped.transform.rotation.w = quat[3]
+
+    broadcaster.sendTransform(static_transformStamped)
 
 def generateImageFromFrame(frame):
     frame = rs.video_frame(frame)
@@ -85,7 +118,7 @@ def generateImageFromFrame(frame):
     img.header.seq = frame.frame_number
     img.header.stamp.secs = math.floor(frame.get_timestamp()/1000)
     img.header.stamp.nsecs = int((frame.get_timestamp()%1000)*10**6)
-    img.header.frame_id = "frame_id" #TODO Sort this shit out
+    img.header.frame_id = "rs_frame" #TODO Sort this shit out
     img.height = frame.get_height()
     img.width = frame.get_width()
     img.encoding = getROSImageFormatFromRS(frame.get_profile().format())
